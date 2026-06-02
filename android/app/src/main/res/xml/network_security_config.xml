@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+    <!-- 微博/小红书 CDN 仍有部分音视频地址走 HTTP，仅对这些域名放行明文 -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">sinaimg.cn</domain>
+        <domain includeSubdomains="true">weibocdn.com</domain>
+        <domain includeSubdomains="true">us.sinaimg.cn</domain>
+        <domain includeSubdomains="true">video.weibocdn.com</domain>
+        <domain includeSubdomains="true">f.video.weibocdn.com</domain>
+        <domain includeSubdomains="true">xhscdn.com</domain>
+        <domain includeSubdomains="true">sns-video-hw.xhscdn.com</domain>
+    </domain-config>
+</network-security-config>
