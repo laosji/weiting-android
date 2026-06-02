@@ -709,8 +709,6 @@ class _PlaylistImportPageState extends State<PlaylistImportPage> {
                     padding: const EdgeInsets.fromLTRB(18, 8, 18, 4),
                     sliver: SliverList.list(
                       children: [
-                        const _SectionTitle(title: '播放器'),
-                        const SizedBox(height: 10),
                         _PlayerHomePanel(
                           totalCount: recommendedItems.length,
                           bookCount: _systemFmCountFor('听书'),
@@ -721,25 +719,42 @@ class _PlaylistImportPageState extends State<PlaylistImportPage> {
                           onPlayAll: () => _startSystemFm('全部'),
                           onPlayBooks: () => _startSystemFm('听书'),
                           onPlayMusic: () => _startSystemFm('听歌'),
-                          onImport: _importing ? null : _openImportSheet,
                         ),
-                        const SizedBox(height: 24),
-                        Text(
-                          '我的列表',
-                          style: Theme.of(context).textTheme.titleLarge
-                              ?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: const Color(0xff242520),
+                        const SizedBox(height: 22),
+                        Row(
+                          children: [
+                            Text(
+                              '我的列表',
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    color: const Color(0xff242520),
+                                  ),
+                            ),
+                            const Spacer(),
+                            if (_playlists.isNotEmpty)
+                              TextButton.icon(
+                                onPressed: _importing ? null : _openImportSheet,
+                                icon: const Icon(Icons.add_rounded, size: 18),
+                                label: const Text('导入'),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: const Color(0xffd9574b),
+                                ),
                               ),
+                          ],
                         ),
                         const SizedBox(height: 10),
                       ],
                     ),
                   ),
                   if (_playlists.isEmpty)
-                    const SliverPadding(
-                      padding: EdgeInsets.fromLTRB(18, 0, 18, 124),
-                      sliver: SliverToBoxAdapter(child: _EmptyState()),
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(18, 0, 18, 124),
+                      sliver: SliverToBoxAdapter(
+                        child: _EmptyState(
+                          onImport: _importing ? null : _openImportSheet,
+                        ),
+                      ),
                     )
                   else
                     SliverPadding(
@@ -1543,23 +1558,6 @@ class _PlaylistCard extends StatelessWidget {
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-        fontWeight: FontWeight.w800,
-        color: const Color(0xff242520),
-      ),
-    );
-  }
-}
-
 class _PlayerHomePanel extends StatelessWidget {
   const _PlayerHomePanel({
     required this.totalCount,
@@ -1571,7 +1569,6 @@ class _PlayerHomePanel extends StatelessWidget {
     required this.onPlayAll,
     required this.onPlayBooks,
     required this.onPlayMusic,
-    required this.onImport,
   });
 
   final int totalCount;
@@ -1583,17 +1580,14 @@ class _PlayerHomePanel extends StatelessWidget {
   final VoidCallback onPlayAll;
   final VoidCallback onPlayBooks;
   final VoidCallback onPlayMusic;
-  final VoidCallback? onImport;
 
   bool get _systemBusy =>
       busyUrl.isNotEmpty &&
       recommendedItems.any((item) => item.sourceUrl == busyUrl);
 
-  bool get _systemPlaying =>
-      isPlaying && recommendedItems.any((item) => item.sourceUrl == activeUrl);
-
   @override
   Widget build(BuildContext context) {
+    final hasFm = totalCount > 0;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: const Color(0xfffffefa),
@@ -1608,34 +1602,37 @@ class _PlayerHomePanel extends StatelessWidget {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 const _FmDisc(),
-                const SizedBox(width: 14),
-                const Expanded(
+                const SizedBox(width: 12),
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
+                      const Text(
                         '微听 FM',
                         style: TextStyle(
                           color: Color(0xff242520),
-                          fontSize: 20,
+                          fontSize: 17,
                           fontWeight: FontWeight.w900,
-                          height: 1.15,
+                          height: 1.1,
                         ),
                       ),
-                      SizedBox(height: 5),
+                      const SizedBox(height: 3),
                       Text(
-                        '随机播放系统精选内容。你的歌单保留在下方，点选后只播放自己的列表。',
-                        style: TextStyle(
-                          color: Color(0xff777168),
-                          fontSize: 13,
-                          height: 1.35,
+                        hasFm ? '随便听点系统精选 · 共 $totalCount 段' : '系统精选暂无内容',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(0xff999289),
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
@@ -1643,47 +1640,20 @@ class _PlayerHomePanel extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: totalCount > 0 ? onPlayAll : null,
-                icon: _systemBusy
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Color(0xfffffefa),
-                        ),
-                      )
-                    : Icon(
-                        _systemPlaying
-                            ? Icons.pause_rounded
-                            : Icons.shuffle_rounded,
-                        size: 20,
-                      ),
-                label: Text(totalCount > 0 ? '随机播放' : '暂无系统 FM'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xff242520),
-                  foregroundColor: const Color(0xfffffefa),
-                  disabledBackgroundColor: const Color(0xffded8ce),
-                  disabledForegroundColor: const Color(0xff8f8980),
-                  padding: const EdgeInsets.symmetric(vertical: 13),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  textStyle: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 14),
             Row(
               children: [
                 Expanded(
+                  flex: 5,
+                  child: _FmShuffleButton(
+                    busy: _systemBusy,
+                    enabled: hasFm,
+                    onTap: onPlayAll,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 3,
                   child: _FmQuickButton(
                     icon: Icons.menu_book_rounded,
                     label: '听书',
@@ -1693,6 +1663,7 @@ class _PlayerHomePanel extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Expanded(
+                  flex: 3,
                   child: _FmQuickButton(
                     icon: Icons.music_note_rounded,
                     label: '听歌',
@@ -1702,28 +1673,67 @@ class _PlayerHomePanel extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: onImport,
-                icon: const Icon(Icons.add_link_rounded, size: 18),
-                label: const Text('导入自己的节目单'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xff242520),
-                  side: const BorderSide(color: Color(0xffded8ce)),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FmShuffleButton extends StatelessWidget {
+  const _FmShuffleButton({
+    required this.busy,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final bool busy;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: enabled ? const Color(0xff242520) : const Color(0xffded8ce),
+      borderRadius: BorderRadius.circular(13),
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        borderRadius: BorderRadius.circular(13),
+        child: SizedBox(
+          height: 48,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (busy)
+                const SizedBox(
+                  width: 17,
+                  height: 17,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Color(0xfffffefa),
                   ),
-                  textStyle: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                  ),
+                )
+              else
+                Icon(
+                  Icons.shuffle_rounded,
+                  size: 19,
+                  color: enabled
+                      ? const Color(0xfffffefa)
+                      : const Color(0xff8f8980),
+                ),
+              const SizedBox(width: 7),
+              Text(
+                '随机播放',
+                style: TextStyle(
+                  color: enabled
+                      ? const Color(0xfffffefa)
+                      : const Color(0xff8f8980),
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1985,19 +1995,72 @@ class _AlbumTile extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState();
+  const _EmptyState({required this.onImport});
+
+  final VoidCallback? onImport;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
       decoration: BoxDecoration(
+        color: const Color(0xfffffefa),
         border: Border.all(color: const Color(0xffeee8df)),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: const Text(
-        '先粘贴几条你想听的视频链接。保存下来后，我们就能逐步看到真实的内容偏好。',
-        style: TextStyle(color: Color(0xff5e5b54), height: 1.5),
+      child: Column(
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: const Color(0xfffbeae5),
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: const Icon(
+              Icons.playlist_add_rounded,
+              color: Color(0xffd9574b),
+              size: 28,
+            ),
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            '还没有自己的节目',
+            style: TextStyle(
+              color: Color(0xff242520),
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            '粘贴你想听的视频链接，存成自己的听单，\n通勤、做家务时用耳朵听。',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Color(0xff8f8980),
+              fontSize: 13,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: onImport,
+            icon: const Icon(Icons.add_rounded, size: 20),
+            label: const Text('导入节目'),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xffd9574b),
+              foregroundColor: const Color(0xfffffefa),
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(13),
+              ),
+              textStyle: const TextStyle(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

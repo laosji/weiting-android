@@ -5,18 +5,22 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:weiting_android/main.dart';
 
 void main() {
-  testWidgets('首页渲染头部与首次使用引导', (WidgetTester tester) async {
+  testWidgets('首页渲染头部、微听 FM 与空状态引导', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(const WeitingApp());
     await tester.pump(const Duration(milliseconds: 100));
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('微听'), findsOneWidget);
-    expect(find.text('播放器'), findsOneWidget);
     expect(find.text('微听 FM'), findsOneWidget);
     expect(find.text('随机播放'), findsOneWidget);
-    expect(find.text('推荐节目'), findsNothing);
-    expect(find.text('导入自己的节目单'), findsOneWidget);
+    expect(find.text('我的列表'), findsOneWidget);
+    // 旧的"播放器"标题和重复导入按钮已移除
+    expect(find.text('播放器'), findsNothing);
+    expect(find.text('导入自己的节目单'), findsNothing);
+    // 空状态引导 + 主 CTA
+    expect(find.text('还没有自己的节目'), findsOneWidget);
+    expect(find.text('导入节目'), findsOneWidget);
   });
 
   testWidgets('点击 + 按钮打开导入面板', (WidgetTester tester) async {
@@ -30,8 +34,9 @@ void main() {
     await tester.tap(importBtn);
     await tester.pumpAndSettle();
 
-    expect(find.text('导入节目'), findsOneWidget);
+    // "导入节目" 既是弹窗标题又是空状态按钮，用唯一文案断言弹窗
     expect(find.text('导入并保存'), findsOneWidget);
+    expect(find.text('列表名'), findsOneWidget);
   });
 
   testWidgets('点击 i 按钮打开关于页', (WidgetTester tester) async {
