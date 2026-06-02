@@ -8,11 +8,9 @@
 
 ## 📱 界面预览
 
-| 导入节目 | 关于页 |
-| :---: | :---: |
-| <img src="docs/screenshots/import.png" width="240" alt="导入节目"> | <img src="docs/screenshots/about.png" width="240" alt="关于页"> |
-
-> 首页（微听 FM 随机播放面板）截图待补充：`docs/screenshots/home.png`。
+| 首页 · 微听 FM | 导入节目 | 关于页 |
+| :---: | :---: | :---: |
+| <img src="docs/screenshots/home.png" width="240" alt="首页 微听 FM"> | <img src="docs/screenshots/import.png" width="240" alt="导入节目"> | <img src="docs/screenshots/about.png" width="240" alt="关于页"> |
 
 ## ✨ 功能
 
