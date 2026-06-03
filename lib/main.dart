@@ -1585,6 +1585,9 @@ class _PlayerHomePanel extends StatelessWidget {
       busyUrl.isNotEmpty &&
       recommendedItems.any((item) => item.sourceUrl == busyUrl);
 
+  bool get _systemPlaying =>
+      isPlaying && recommendedItems.any((item) => item.sourceUrl == activeUrl);
+
   @override
   Widget build(BuildContext context) {
     final hasFm = totalCount > 0;
@@ -1602,14 +1605,13 @@ class _PlayerHomePanel extends StatelessWidget {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const _FmDisc(),
-                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1626,7 +1628,9 @@ class _PlayerHomePanel extends StatelessWidget {
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        hasFm ? '随便听点系统精选 · 共 $totalCount 段' : '系统精选暂无内容',
+                        _systemPlaying
+                            ? '正在转动…'
+                            : (hasFm ? '轻触唱片，随便听听' : '系统精选暂无内容'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -1640,36 +1644,29 @@ class _PlayerHomePanel extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 6),
+            Center(
+              child: _FmTurntable(
+                spinning: _systemPlaying,
+                busy: _systemBusy,
+                enabled: hasFm,
+                onTap: onPlayAll,
+              ),
+            ),
+            const SizedBox(height: 10),
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Expanded(
-                  flex: 5,
-                  child: _FmShuffleButton(
-                    busy: _systemBusy,
-                    enabled: hasFm,
-                    onTap: onPlayAll,
-                  ),
+                _FmChip(
+                  icon: Icons.menu_book_rounded,
+                  label: '听书',
+                  onTap: bookCount > 0 ? onPlayBooks : null,
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 3,
-                  child: _FmQuickButton(
-                    icon: Icons.menu_book_rounded,
-                    label: '听书',
-                    count: bookCount,
-                    onTap: bookCount > 0 ? onPlayBooks : null,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 3,
-                  child: _FmQuickButton(
-                    icon: Icons.music_note_rounded,
-                    label: '听歌',
-                    count: musicCount,
-                    onTap: musicCount > 0 ? onPlayMusic : null,
-                  ),
+                const SizedBox(width: 10),
+                _FmChip(
+                  icon: Icons.music_note_rounded,
+                  label: '听歌',
+                  onTap: musicCount > 0 ? onPlayMusic : null,
                 ),
               ],
             ),
@@ -1680,149 +1677,306 @@ class _PlayerHomePanel extends StatelessWidget {
   }
 }
 
-class _FmShuffleButton extends StatelessWidget {
-  const _FmShuffleButton({
+/// 唱片机：黑胶唱片（播放时持续旋转）+ 唱臂 + 中心 spindle（兼播放/暂停指示）。
+/// 实际播放控制在底部 mini player，这里点按 = 随机播放系统 FM。
+class _FmTurntable extends StatefulWidget {
+  const _FmTurntable({
+    required this.spinning,
     required this.busy,
     required this.enabled,
     required this.onTap,
   });
 
+  final bool spinning;
   final bool busy;
   final bool enabled;
   final VoidCallback onTap;
 
   @override
+  State<_FmTurntable> createState() => _FmTurntableState();
+}
+
+class _FmTurntableState extends State<_FmTurntable>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _spin = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 8),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.spinning) _spin.repeat();
+  }
+
+  @override
+  void didUpdateWidget(covariant _FmTurntable oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.spinning && !_spin.isAnimating) {
+      _spin.repeat();
+    } else if (!widget.spinning && _spin.isAnimating) {
+      _spin.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _spin.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Material(
-      color: enabled ? const Color(0xff242520) : const Color(0xffded8ce),
-      borderRadius: BorderRadius.circular(13),
-      child: InkWell(
-        onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(13),
-        child: SizedBox(
-          height: 48,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (busy)
-                const SizedBox(
-                  width: 17,
-                  height: 17,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Color(0xfffffefa),
+    return GestureDetector(
+      onTap: widget.enabled ? widget.onTap : null,
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: 214,
+        height: 158,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // 唱盘底座
+            Container(
+              width: 150,
+              height: 150,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Color(0xfff1ebe1),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0x14272218),
+                    blurRadius: 16,
+                    offset: Offset(0, 6),
                   ),
-                )
-              else
-                Icon(
-                  Icons.shuffle_rounded,
-                  size: 19,
-                  color: enabled
-                      ? const Color(0xfffffefa)
-                      : const Color(0xff8f8980),
-                ),
-              const SizedBox(width: 7),
-              Text(
-                '随机播放',
-                style: TextStyle(
-                  color: enabled
-                      ? const Color(0xfffffefa)
-                      : const Color(0xff8f8980),
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w900,
-                ),
+                ],
               ),
-            ],
-          ),
+            ),
+            // 旋转的黑胶
+            RotationTransition(
+              turns: _spin,
+              child: const _Vinyl(),
+            ),
+            // 不旋转的中心 spindle（兼播放/暂停/加载指示）
+            _Spindle(
+              busy: widget.busy,
+              playing: widget.spinning,
+              enabled: widget.enabled,
+            ),
+            // 唱臂
+            Positioned(
+              top: 2,
+              right: 8,
+              child: _ToneArm(engaged: widget.spinning),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _FmQuickButton extends StatelessWidget {
-  const _FmQuickButton({
+class _Vinyl extends StatelessWidget {
+  const _Vinyl();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 132,
+      height: 132,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [Color(0xff2a2824), Color(0xff141311)],
+          stops: [0.55, 1.0],
+        ),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // 唱片纹路
+          for (final d in const [116.0, 100.0, 84.0, 68.0])
+            Container(
+              width: d,
+              height: d,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.045),
+                ),
+              ),
+            ),
+          // 中心标签（accent）
+          Container(
+            width: 50,
+            height: 50,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xfff6c4b5), Color(0xffd9574b)],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Spindle extends StatelessWidget {
+  const _Spindle({
+    required this.busy,
+    required this.playing,
+    required this.enabled,
+  });
+
+  final bool busy;
+  final bool playing;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        color: Color(0xfffffefa),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x33272218),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Center(
+        child: busy
+            ? const SizedBox(
+                width: 15,
+                height: 15,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Color(0xffd9574b),
+                ),
+              )
+            : Icon(
+                playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                size: 20,
+                color: enabled
+                    ? const Color(0xffd9574b)
+                    : const Color(0xffc4bdb2),
+              ),
+      ),
+    );
+  }
+}
+
+/// 唱臂：未播放时抬起、播放时落到唱片上。
+class _ToneArm extends StatelessWidget {
+  const _ToneArm({required this.engaged});
+
+  final bool engaged;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedRotation(
+      duration: const Duration(milliseconds: 320),
+      turns: engaged ? 0.0 : -0.06,
+      alignment: Alignment.topRight,
+      child: SizedBox(
+        width: 40,
+        height: 104,
+        child: Stack(
+          children: [
+            // 臂杆
+            Positioned(
+              top: 12,
+              right: 13,
+              child: Container(
+                width: 6,
+                height: 86,
+                decoration: BoxDecoration(
+                  color: const Color(0xff3a3631),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+            ),
+            // 唱头
+            Positioned(
+              bottom: 0,
+              right: 8,
+              child: Container(
+                width: 16,
+                height: 18,
+                decoration: BoxDecoration(
+                  color: const Color(0xff242520),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+            // 转轴底座
+            Positioned(
+              top: 0,
+              right: 6,
+              child: Container(
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xff242520),
+                  border: Border.all(color: const Color(0xff58524a), width: 2),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FmChip extends StatelessWidget {
+  const _FmChip({
     required this.icon,
     required this.label,
-    required this.count,
     required this.onTap,
   });
 
   final IconData icon;
   final String label;
-  final int count;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final enabled = onTap != null;
+    final fg = enabled ? const Color(0xff5e5b54) : const Color(0xffc4bdb2);
     return Material(
-      color: enabled ? const Color(0xfff7f1e9) : const Color(0xfff3eee7),
-      borderRadius: BorderRadius.circular(14),
+      color: enabled ? const Color(0xfff4eee4) : const Color(0xfff8f4ed),
+      borderRadius: BorderRadius.circular(999),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          height: 48,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+        borderRadius: BorderRadius.circular(999),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                icon,
-                size: 18,
-                color: enabled
-                    ? const Color(0xff5e5b54)
-                    : const Color(0xffaaa49a),
-              ),
+              Icon(icon, size: 17, color: fg),
               const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  count > 0 ? '$label $count' : label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: enabled
-                        ? const Color(0xff5e5b54)
-                        : const Color(0xffaaa49a),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                  ),
+              Text(
+                label,
+                style: TextStyle(
+                  color: fg,
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _FmDisc extends StatelessWidget {
-  const _FmDisc();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 58,
-      height: 58,
-      decoration: BoxDecoration(
-        color: const Color(0xff242520),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x1f272218),
-            blurRadius: 18,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: const Stack(
-        alignment: Alignment.center,
-        children: [
-          Icon(Icons.album_rounded, color: Color(0xfffffefa), size: 35),
-          Icon(Icons.play_arrow_rounded, color: Color(0xffd9574b), size: 20),
-        ],
       ),
     );
   }

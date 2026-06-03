@@ -6,6 +6,9 @@ import 'package:weiting_android/main.dart';
 
 void main() {
   testWidgets('首页渲染头部、微听 FM 与空状态引导', (WidgetTester tester) async {
+    // 加高测试视口，确保唱片机 + 空状态等全部内容都被构建（slivers 懒加载）
+    await tester.binding.setSurfaceSize(const Size(420, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(const WeitingApp());
     await tester.pump(const Duration(milliseconds: 100));
@@ -13,7 +16,10 @@ void main() {
 
     expect(find.text('微听'), findsOneWidget);
     expect(find.text('微听 FM'), findsOneWidget);
-    expect(find.text('随机播放'), findsOneWidget);
+    // FM 走带：听书/听歌 副控 + 圆形播放主控（无"随机播放"文字了）
+    expect(find.text('听书'), findsOneWidget);
+    expect(find.text('听歌'), findsOneWidget);
+    expect(find.byIcon(Icons.play_arrow_rounded), findsWidgets);
     expect(find.text('我的列表'), findsOneWidget);
     // 旧的"播放器"标题和重复导入按钮已移除
     expect(find.text('播放器'), findsNothing);
